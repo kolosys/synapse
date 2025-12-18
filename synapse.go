@@ -25,25 +25,25 @@ func New[K comparable, V any](opts ...Option) *Cache[K, V] {
 	for _, opt := range opts {
 		opt(options)
 	}
-	
+
 	c := &Cache[K, V]{
 		shards:    make([]*Shard[K, V], options.NumShards),
 		threshold: options.SimilarityThreshold,
 		options:   options,
 	}
-	
+
 	// Initialize shards
 	maxSizePerShard := options.MaxSize / options.NumShards
 	if maxSizePerShard == 0 {
 		maxSizePerShard = 1
 	}
-	
+
 	for i := 0; i < options.NumShards; i++ {
 		var policy eviction.EvictionPolicy
 		if options.EvictionPolicy != nil {
 			policy = options.EvictionPolicy
 		}
-		
+
 		c.shards[i] = newShard[K, V](
 			maxSizePerShard,
 			c.similarity,
@@ -52,7 +52,7 @@ func New[K comparable, V any](opts ...Option) *Cache[K, V] {
 			policy,
 		)
 	}
-	
+
 	return c
 }
 
@@ -91,12 +91,12 @@ func (c *Cache[K, V]) Set(ctx context.Context, key K, value V) error {
 func (c *Cache[K, V]) GetSimilar(ctx context.Context, key K) (V, K, float64, bool) {
 	// For similarity search, we need to search across all shards
 	// In a production implementation, you might want to use LSH or other indexing
-	
+
 	var bestValue V
 	var bestKey K
 	bestScore := 0.0
 	found := false
-	
+
 	for _, shard := range c.shards {
 		v, k, score, ok := shard.getSimilar(ctx, key)
 		if ok && score > bestScore {
@@ -105,7 +105,7 @@ func (c *Cache[K, V]) GetSimilar(ctx context.Context, key K) (V, K, float64, boo
 			bestScore = score
 			found = true
 		}
-		
+
 		// Check for context cancellation
 		select {
 		case <-ctx.Done():
@@ -115,7 +115,7 @@ func (c *Cache[K, V]) GetSimilar(ctx context.Context, key K) (V, K, float64, boo
 		default:
 		}
 	}
-	
+
 	return bestValue, bestKey, bestScore, found
 }
 
@@ -140,4 +140,3 @@ func keyToString[K comparable](key K) string {
 	// Use fmt.Sprintf for a simple string representation
 	return fmt.Sprintf("%v", key)
 }
-

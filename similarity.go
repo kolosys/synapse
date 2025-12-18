@@ -9,7 +9,7 @@ type Similarity[K comparable] interface {
 	// Score computes the similarity score between two keys
 	// Returns a value between 0.0 and 1.0
 	Score(a, b K) float64
-	
+
 	// Threshold returns the minimum similarity score for a match
 	Threshold() float64
 }
@@ -37,4 +37,3 @@ func NewSimilarity[K comparable](fn SimilarityFunc[K], threshold float64) Simila
 		threshold: threshold,
 	}
 }
-

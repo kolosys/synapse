@@ -54,4 +54,3 @@ func getMetadata(ctx context.Context) map[string]any {
 	}
 	return nil
 }
-

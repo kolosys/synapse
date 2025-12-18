@@ -75,4 +75,3 @@ func WithStats(enable bool) Option {
 		o.EnableStats = enable
 	}
 }
-

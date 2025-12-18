@@ -37,7 +37,7 @@ func newShard[K comparable, V any](maxSize int, similarity SimilarityFunc[K], th
 func (s *Shard[K, V]) get(ctx context.Context, key K) (V, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
@@ -45,33 +45,33 @@ func (s *Shard[K, V]) get(ctx context.Context, key K) (V, bool) {
 		return zero, false
 	default:
 	}
-	
+
 	namespace := GetNamespace(ctx)
-	
+
 	entry, ok := s.data[key]
 	if !ok {
 		var zero V
 		return zero, false
 	}
-	
+
 	// Check namespace match
 	if namespace != "" && entry.Namespace != namespace {
 		var zero V
 		return zero, false
 	}
-	
+
 	// Check expiration
 	if entry.IsExpired() {
 		var zero V
 		return zero, false
 	}
-	
+
 	// Update access tracking
 	entry.Touch()
 	if s.evictionPolicy != nil {
 		s.evictionPolicy.OnAccess(key)
 	}
-	
+
 	return entry.Value, true
 }
 
@@ -79,7 +79,7 @@ func (s *Shard[K, V]) get(ctx context.Context, key K) (V, bool) {
 func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
@@ -88,27 +88,27 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 		return zeroV, zeroK, 0, false
 	default:
 	}
-	
+
 	namespace := GetNamespace(ctx)
-	
+
 	var bestKey K
 	var bestValue V
 	bestScore := 0.0
 	found := false
-	
+
 	for _, k := range s.keys {
 		entry := s.data[k]
-		
+
 		// Check namespace match
 		if namespace != "" && entry.Namespace != namespace {
 			continue
 		}
-		
+
 		// Check expiration
 		if entry.IsExpired() {
 			continue
 		}
-		
+
 		// Check context cancellation periodically
 		select {
 		case <-ctx.Done():
@@ -117,7 +117,7 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 			return zeroV, zeroK, 0, false
 		default:
 		}
-		
+
 		// Compute similarity
 		if s.similarity != nil {
 			score := s.similarity(key, k)
@@ -129,7 +129,7 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 			}
 		}
 	}
-	
+
 	if found {
 		// Update access tracking
 		entry := s.data[bestKey]
@@ -138,7 +138,7 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 			s.evictionPolicy.OnAccess(bestKey)
 		}
 	}
-	
+
 	return bestValue, bestKey, bestScore, found
 }
 
@@ -146,16 +146,16 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 func (s *Shard[K, V]) set(ctx context.Context, key K, value V) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
-	
+
 	namespace := GetNamespace(ctx)
-	
+
 	// Check if key already exists
 	if entry, ok := s.data[key]; ok {
 		entry.Value = value
@@ -165,23 +165,23 @@ func (s *Shard[K, V]) set(ctx context.Context, key K, value V) error {
 		}
 		return nil
 	}
-	
+
 	// Evict if necessary
 	if s.maxSize > 0 && len(s.data) >= s.maxSize {
 		if err := s.evict(); err != nil {
 			return err
 		}
 	}
-	
+
 	// Create new entry
 	entry := newEntry(key, value, s.ttl, namespace)
 	s.data[key] = entry
 	s.keys = append(s.keys, key)
-	
+
 	if s.evictionPolicy != nil {
 		s.evictionPolicy.OnAdd(key, entry.AccessCount, entry.CreatedAt, entry.AccessedAt)
 	}
-	
+
 	return nil
 }
 
@@ -189,20 +189,20 @@ func (s *Shard[K, V]) set(ctx context.Context, key K, value V) error {
 func (s *Shard[K, V]) delete(ctx context.Context, key K) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
 		return false
 	default:
 	}
-	
+
 	if _, ok := s.data[key]; !ok {
 		return false
 	}
-	
+
 	delete(s.data, key)
-	
+
 	// Remove from keys slice
 	for i, k := range s.keys {
 		if k == key {
@@ -210,11 +210,11 @@ func (s *Shard[K, V]) delete(ctx context.Context, key K) bool {
 			break
 		}
 	}
-	
+
 	if s.evictionPolicy != nil {
 		s.evictionPolicy.OnRemove(key)
 	}
-	
+
 	return true
 }
 
@@ -229,19 +229,19 @@ func (s *Shard[K, V]) evict() error {
 		}
 		return nil
 	}
-	
+
 	victim, ok := s.evictionPolicy.SelectVictim()
 	if !ok {
 		return nil
 	}
-	
+
 	key, ok := victim.(K)
 	if !ok {
 		return nil
 	}
-	
+
 	delete(s.data, key)
-	
+
 	// Remove from keys slice
 	for i, k := range s.keys {
 		if k == key {
@@ -249,9 +249,9 @@ func (s *Shard[K, V]) evict() error {
 			break
 		}
 	}
-	
+
 	s.evictionPolicy.OnRemove(key)
-	
+
 	return nil
 }
 
@@ -261,4 +261,3 @@ func (s *Shard[K, V]) len() int {
 	defer s.mu.RUnlock()
 	return len(s.data)
 }
-

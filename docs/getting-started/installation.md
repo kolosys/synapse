@@ -1,20 +1,17 @@
 # Installation
 
-This guide will help you install and set up synapse in your Go project.
+This guide will help you install and set up Synapse in your Go project.
 
 ## Prerequisites
 
-Before installing synapse, ensure you have:
+Before installing Synapse, ensure you have:
 
-- **Go ** or later installed
+- **Go 1.24+** installed
 - A Go module initialized in your project (run `go mod init` if needed)
-- Access to the GitHub repository (for private repositories)
 
-## Installation Steps
+## Installation
 
-### Step 1: Install the Package
-
-Use `go get` to install synapse:
+Use `go get` to install Synapse:
 
 ```bash
 go get github.com/kolosys/synapse
@@ -22,34 +19,48 @@ go get github.com/kolosys/synapse
 
 This will download the package and add it to your `go.mod` file.
 
-### Step 2: Import in Your Code
+## Available Packages
 
-Import the package in your Go source files:
+Synapse includes several packages that you can import based on your needs:
+
+### Core Package
+
+The main cache functionality:
 
 ```go
 import "github.com/kolosys/synapse"
 ```
 
-### Multiple Packages
+### Algorithms Package
 
-synapse includes several packages. Import the ones you need:
+Built-in similarity algorithms for string and vector comparisons:
 
 ```go
-// 
 import "github.com/kolosys/synapse/algorithms"
 ```
 
-```go
-// 
-import "github.com/kolosys/synapse"
-```
+Provides:
+
+- `Levenshtein` - Edit distance for strings
+- `DamerauLevenshtein` - Edit distance with transpositions
+- `Hamming` / `HammingBytes` - Hamming distance for equal-length strings/bytes
+- `Euclidean` - Euclidean distance for vectors
+- `Manhattan` - Manhattan distance for vectors
+
+### Eviction Package
+
+Cache eviction policies:
 
 ```go
-// 
 import "github.com/kolosys/synapse/eviction"
 ```
 
-### Step 3: Verify Installation
+Provides:
+
+- `LRU` - Least Recently Used eviction
+- `CombinedPolicy` - Combine multiple policies with weighted scoring
+
+## Verify Installation
 
 Create a simple test file to verify the installation:
 
@@ -57,12 +68,20 @@ Create a simple test file to verify the installation:
 package main
 
 import (
+    "context"
     "fmt"
+
     "github.com/kolosys/synapse"
 )
 
 func main() {
-    fmt.Println("synapse installed successfully!")
+    cache := synapse.New[string, string]()
+    ctx := context.Background()
+
+    cache.Set(ctx, "hello", "world")
+    if value, found := cache.Get(ctx, "hello"); found {
+        fmt.Println("Synapse installed successfully:", value)
+    }
 }
 ```
 
@@ -72,7 +91,7 @@ Run the test:
 go run main.go
 ```
 
-## Updating the Package
+## Updating
 
 To update to the latest version:
 
@@ -86,37 +105,15 @@ To update to a specific version:
 go get github.com/kolosys/synapse@v1.2.3
 ```
 
-## Installing a Specific Version
-
-To install a specific version of the package:
-
-```bash
-go get github.com/kolosys/synapse@v1.0.0
-```
-
-Check available versions on the [GitHub releases page](https://github.com/kolosys/synapse/releases).
-
 ## Development Setup
 
 If you want to contribute or modify the library:
 
-### Clone the Repository
-
 ```bash
 git clone https://github.com/kolosys/synapse.git
 cd synapse
-```
-
-### Install Dependencies
-
-```bash
 go mod download
-```
-
-### Run Tests
-
-```bash
-go test ./...
+go test -race ./...
 ```
 
 ## Troubleshooting
@@ -140,16 +137,11 @@ git config --global url."git@github.com:".insteadOf "https://github.com/"
 Or set up GOPRIVATE:
 
 ```bash
-export GOPRIVATE=github.com/kolosys/synapse
+export GOPRIVATE=github.com/kolosys/*
 ```
 
 ## Next Steps
 
-Now that you have synapse installed, check out the [Quick Start Guide](quick-start.md) to learn how to use it.
-
-## Additional Resources
-
-- [Quick Start Guide](quick-start.md)
-- [API Reference](../api-reference/)
-- [Examples](../examples/README.md)
-
+- [Quick Start Guide](quick-start.md) - Learn how to use Synapse
+- [Core Concepts](../core-concepts/synapse.md) - Understand the architecture
+- [API Reference](../api-reference/synapse.md) - Complete API documentation

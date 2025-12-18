@@ -1,238 +1,371 @@
 # Quick Start
 
-This guide will help you get started with synapse quickly with a basic example.
+This guide will help you get started with Synapse quickly with practical examples.
 
-## Basic Usage
+## Basic Cache Operations
 
-Here's a simple example to get you started:
-
-```go
-package main
-
-import (
-    "fmt"
-    "log"
-    "github.com/kolosys/synapse/algorithms"
-    "github.com/kolosys/synapse"
-    "github.com/kolosys/synapse/eviction"
-)
-
-func main() {
-    // Basic usage example
-    fmt.Println("Welcome to synapse!")
-    
-    // TODO: Add your code here
-}
-```
-
-## Common Use Cases
-
-### Using algorithms
-
-**Import Path:** `github.com/kolosys/synapse/algorithms`
-
-
+Create a cache and perform basic CRUD operations:
 
 ```go
 package main
 
 import (
+    "context"
     "fmt"
-    "github.com/kolosys/synapse/algorithms"
-)
 
-func main() {
-    // Example usage of algorithms
-    fmt.Println("Using algorithms package")
-}
-```
-
-#### Available Functions
-- **DamerauLevenshtein** - DamerauLevenshtein computes the Damerau-Levenshtein distance Similar to Levenshtein but also allows transpositions
-- **Euclidean** - Euclidean computes the Euclidean distance between two points Returns a similarity score (inverse of distance)
-- **Hamming** - Hamming computes the Hamming distance between two strings Strings must be of equal length. Returns a normalized score between 0.0 and 1.0
-- **HammingBytes** - HammingBytes computes the Hamming distance between two byte slices
-- **Levenshtein** - Levenshtein computes the Levenshtein distance between two strings Returns a normalized score between 0.0 (completely different) and 1.0 (identical)
-- **Manhattan** - Manhattan computes the Manhattan distance between two points
-
-For detailed API documentation, see the [algorithms API Reference](../api-reference/algorithms.md).
-
-### Using synapse
-
-**Import Path:** `github.com/kolosys/synapse`
-
-
-
-```go
-package main
-
-import (
-    "fmt"
     "github.com/kolosys/synapse"
 )
 
 func main() {
-    // Example usage of synapse
-    fmt.Println("Using synapse package")
+    ctx := context.Background()
+
+    // Create a new cache with default settings
+    cache := synapse.New[string, int]()
+
+    // Set values
+    cache.Set(ctx, "apples", 10)
+    cache.Set(ctx, "oranges", 5)
+
+    // Get value by exact key
+    if value, found := cache.Get(ctx, "apples"); found {
+        fmt.Println("Apples:", value) // Output: Apples: 10
+    }
+
+    // Delete a key
+    cache.Delete(ctx, "oranges")
+
+    // Get cache size
+    fmt.Println("Size:", cache.Len()) // Output: Size: 1
 }
 ```
 
-#### Available Types
-- **Cache** - Cache is a generic similarity-based cache with sharding
-- **Entry** - Entry represents a cache entry with metadata
-- **EvictionPolicy** - EvictionPolicy is re-exported from the eviction package
-- **Option** - Option is a function that modifies Options
-- **Options** - Options contains configuration options for the cache
-- **Shard** - Shard represents a single shard of the cache
-- **Similarity** - Similarity is an interface for similarity computation
-- **SimilarityFunc** - SimilarityFunc is a function type that computes similarity between two keys It should return a score between 0.0 (completely different) and 1.0 (identical)
+## Similarity-Based Lookups
 
-#### Available Functions
-- **GetMetadata** - GetMetadata retrieves a metadata value from the context
-- **GetNamespace** - GetNamespace retrieves the namespace from the context
-- **WithMetadata** - WithMetadata adds metadata to the context
-- **WithNamespace** - WithNamespace adds a namespace to the context
-
-For detailed API documentation, see the [synapse API Reference](../api-reference/synapse.md).
-
-### Using eviction
-
-**Import Path:** `github.com/kolosys/synapse/eviction`
-
-
+The core feature of Synapse is finding similar keys when exact matches don't exist:
 
 ```go
 package main
 
 import (
+    "context"
     "fmt"
-    "github.com/kolosys/synapse/eviction"
-)
 
-func main() {
-    // Example usage of eviction
-    fmt.Println("Using eviction package")
-}
-```
-
-#### Available Types
-- **CombinedPolicy** - CombinedPolicy combines multiple eviction policies with weighted scoring
-- **EvictionPolicy** - EvictionPolicy defines the interface for cache eviction strategies
-- **LRU** - LRU implements a Least Recently Used eviction policy
-
-For detailed API documentation, see the [eviction API Reference](../api-reference/eviction.md).
-
-## Step-by-Step Tutorial
-
-### Step 1: Import the Package
-
-First, import the necessary packages in your Go file:
-
-```go
-import (
-    "fmt"
-    "github.com/kolosys/synapse/algorithms"
     "github.com/kolosys/synapse"
-    "github.com/kolosys/synapse/eviction"
+    "github.com/kolosys/synapse/algorithms"
 )
-```
 
-### Step 2: Initialize
-
-Set up the basic configuration:
-
-```go
 func main() {
-    // Initialize your application
-    fmt.Println("Initializing synapse...")
+    ctx := context.Background()
+
+    // Create cache with similarity threshold
+    cache := synapse.New[string, string](
+        synapse.WithThreshold(0.7), // 70% similarity required
+    )
+
+    // Set similarity function
+    cache.WithSimilarity(algorithms.Levenshtein)
+
+    // Populate cache
+    cache.Set(ctx, "user:alice", "Alice's profile")
+    cache.Set(ctx, "user:bob", "Bob's profile")
+    cache.Set(ctx, "user:charlie", "Charlie's profile")
+
+    // Exact match works as normal
+    if value, found := cache.Get(ctx, "user:alice"); found {
+        fmt.Println("Exact:", value)
+    }
+
+    // Find similar key (typo: "user:alic" instead of "user:alice")
+    value, matchedKey, score, found := cache.GetSimilar(ctx, "user:alic")
+    if found {
+        fmt.Printf("Found: %s\n", value)
+        fmt.Printf("Matched key: %s\n", matchedKey)
+        fmt.Printf("Similarity: %.2f\n", score)
+    }
+    // Output:
+    // Found: Alice's profile
+    // Matched key: user:alice
+    // Similarity: 0.91
 }
-```
-
-### Step 3: Use the Library
-
-Implement your specific use case:
-
-```go
-func main() {
-    // Your implementation here
-}
-```
-
-## Running Your Code
-
-To run your Go program:
-
-```bash
-go run main.go
-```
-
-To build an executable:
-
-```bash
-go build -o myapp
-./myapp
 ```
 
 ## Configuration Options
 
-synapse can be configured to suit your needs. Check the [Core Concepts](../core-concepts/) section for detailed information about configuration options.
-
-## Error Handling
-
-Always handle errors appropriately:
+Synapse uses the functional options pattern for configuration:
 
 ```go
-result, err := someFunction()
-if err != nil {
-    log.Fatalf("Error: %v", err)
+cache := synapse.New[string, string](
+    synapse.WithShards(16),           // Number of shards (1-256)
+    synapse.WithMaxSize(10000),       // Maximum entries
+    synapse.WithThreshold(0.8),       // Similarity threshold (0.0-1.0)
+    synapse.WithTTL(5 * time.Minute), // Entry expiration
+    synapse.WithStats(true),          // Enable statistics
+)
+```
+
+| Option             | Default | Description                          |
+| ------------------ | ------- | ------------------------------------ |
+| `WithShards(n)`    | 16      | Number of cache shards (1-256)       |
+| `WithMaxSize(n)`   | 1000    | Maximum entries across all shards    |
+| `WithThreshold(t)` | 0.8     | Minimum similarity score for matches |
+| `WithEviction(p)`  | nil     | Eviction policy (e.g., LRU)          |
+| `WithTTL(d)`       | 0       | Time-to-live for entries             |
+| `WithStats(b)`     | false   | Enable statistics tracking           |
+
+## Using Eviction Policies
+
+Configure LRU eviction to manage cache size:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/kolosys/synapse"
+    "github.com/kolosys/synapse/eviction"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Create LRU policy
+    lru := eviction.NewLRU(100)
+
+    // Create cache with LRU eviction
+    cache := synapse.New[string, string](
+        synapse.WithMaxSize(100),
+        synapse.WithEviction(lru),
+    )
+
+    // Add entries - LRU will evict oldest when full
+    for i := 0; i < 150; i++ {
+        key := fmt.Sprintf("key-%d", i)
+        cache.Set(ctx, key, "value")
+    }
+
+    fmt.Println("Size:", cache.Len()) // Output: Size: 100
 }
 ```
 
-## Best Practices
+## Namespace Isolation
 
-- Always handle errors returned by library functions
-- Check the API documentation for detailed parameter information
-- Use meaningful variable and function names
-- Add comments to document your code
+Partition cache entries by namespace for multi-tenant applications:
 
-## Complete Example
+```go
+package main
 
-Here's a complete working example:
+import (
+    "context"
+    "fmt"
+
+    "github.com/kolosys/synapse"
+)
+
+func main() {
+    cache := synapse.New[string, string]()
+
+    // Create contexts with different namespaces
+    tenant1 := synapse.WithNamespace(context.Background(), "tenant-1")
+    tenant2 := synapse.WithNamespace(context.Background(), "tenant-2")
+
+    // Store same key in different namespaces
+    cache.Set(tenant1, "config", "tenant 1 config")
+    cache.Set(tenant2, "config", "tenant 2 config")
+
+    // Retrieve from specific namespace
+    if value, found := cache.Get(tenant1, "config"); found {
+        fmt.Println("Tenant 1:", value) // Output: Tenant 1: tenant 1 config
+    }
+
+    if value, found := cache.Get(tenant2, "config"); found {
+        fmt.Println("Tenant 2:", value) // Output: Tenant 2: tenant 2 config
+    }
+}
+```
+
+## TTL Expiration
+
+Automatically expire cache entries after a duration:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "github.com/kolosys/synapse"
+)
+
+func main() {
+    ctx := context.Background()
+
+    cache := synapse.New[string, string](
+        synapse.WithTTL(1 * time.Second),
+    )
+
+    cache.Set(ctx, "temp", "temporary value")
+
+    // Value exists immediately
+    if value, found := cache.Get(ctx, "temp"); found {
+        fmt.Println("Before:", value)
+    }
+
+    // Wait for expiration
+    time.Sleep(2 * time.Second)
+
+    // Value is expired
+    if _, found := cache.Get(ctx, "temp"); !found {
+        fmt.Println("After: expired")
+    }
+}
+```
+
+## Custom Similarity Functions
+
+Define your own similarity function for domain-specific matching:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "strings"
+
+    "github.com/kolosys/synapse"
+)
+
+// prefixSimilarity compares string prefixes
+func prefixSimilarity(a, b string) float64 {
+    a, b = strings.ToLower(a), strings.ToLower(b)
+    if a == b {
+        return 1.0
+    }
+
+    minLen := len(a)
+    if len(b) < minLen {
+        minLen = len(b)
+    }
+
+    matches := 0
+    for i := 0; i < minLen; i++ {
+        if a[i] == b[i] {
+            matches++
+        } else {
+            break
+        }
+    }
+
+    maxLen := len(a)
+    if len(b) > maxLen {
+        maxLen = len(b)
+    }
+
+    return float64(matches) / float64(maxLen)
+}
+
+func main() {
+    ctx := context.Background()
+
+    cache := synapse.New[string, string](
+        synapse.WithThreshold(0.5),
+    )
+    cache.WithSimilarity(prefixSimilarity)
+
+    cache.Set(ctx, "application", "An app")
+    cache.Set(ctx, "banana", "A fruit")
+
+    // "app" matches "application" by prefix
+    value, key, score, found := cache.GetSimilar(ctx, "app")
+    if found {
+        fmt.Printf("Found: %s (key: %s, score: %.2f)\n", value, key, score)
+        // Output: Found: An app (key: application, score: 0.27)
+    }
+}
+```
+
+## Using Built-in Algorithms
+
+Synapse provides several built-in similarity algorithms:
 
 ```go
 package main
 
 import (
     "fmt"
-    "log"
+
     "github.com/kolosys/synapse/algorithms"
-    "github.com/kolosys/synapse"
-    "github.com/kolosys/synapse/eviction"
 )
 
 func main() {
-    fmt.Println("Starting synapse application...")
-    
-    // Add your implementation here
-    
-    fmt.Println("Application completed successfully!")
+    // Levenshtein distance (edit distance)
+    score := algorithms.Levenshtein("hello", "helo")
+    fmt.Printf("Levenshtein: %.2f\n", score) // 0.80
+
+    // Damerau-Levenshtein (with transpositions)
+    score = algorithms.DamerauLevenshtein("hello", "hlelo")
+    fmt.Printf("Damerau-Levenshtein: %.2f\n", score) // 0.80
+
+    // Hamming distance (same length strings)
+    score = algorithms.Hamming("hello", "hallo")
+    fmt.Printf("Hamming: %.2f\n", score) // 0.80
+
+    // Euclidean distance (vectors)
+    score = algorithms.Euclidean([]float64{1, 2, 3}, []float64{1, 2, 4})
+    fmt.Printf("Euclidean: %.2f\n", score) // 0.50
+
+    // Manhattan distance (vectors)
+    score = algorithms.Manhattan([]float64{1, 2, 3}, []float64{1, 2, 4})
+    fmt.Printf("Manhattan: %.2f\n", score) // 0.50
+}
+```
+
+## Context Cancellation
+
+Synapse respects context cancellation for all operations:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "github.com/kolosys/synapse"
+    "github.com/kolosys/synapse/algorithms"
+)
+
+func main() {
+    cache := synapse.New[string, string]()
+    cache.WithSimilarity(algorithms.Levenshtein)
+
+    // Populate with many entries
+    ctx := context.Background()
+    for i := 0; i < 10000; i++ {
+        cache.Set(ctx, fmt.Sprintf("key-%d", i), "value")
+    }
+
+    // Create context with timeout
+    searchCtx, cancel := context.WithTimeout(ctx, 1*time.Millisecond)
+    defer cancel()
+
+    // Similarity search respects cancellation
+    _, _, _, found := cache.GetSimilar(searchCtx, "search-term")
+    if !found {
+        fmt.Println("Search cancelled or no match found")
+    }
 }
 ```
 
 ## Next Steps
 
-Now that you've seen the basics, explore:
-
-- **[Core Concepts](../core-concepts/)** - Understanding the library architecture
-- **[API Reference](../api-reference/)** - Complete API documentation
-- **[Examples](../examples/README.md)** - More detailed examples
-- **[Advanced Topics](../advanced/)** - Performance tuning and advanced patterns
-
-## Getting Help
-
-If you run into issues:
-
-1. Check the [API Reference](../api-reference/)
-2. Browse the [Examples](../examples/README.md)
-3. Visit the [GitHub Issues](https://github.com/kolosys/synapse/issues) page
-
+- [Core Concepts](../core-concepts/synapse.md) - Understand the architecture
+- [Algorithms](../core-concepts/algorithms.md) - Learn about similarity algorithms
+- [Eviction Policies](../core-concepts/eviction.md) - Configure cache eviction
+- [Best Practices](../advanced/best-practices.md) - Production recommendations
+- [Performance Tuning](../advanced/performance-tuning.md) - Optimize for your workload
