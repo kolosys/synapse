@@ -1,4 +1,4 @@
-# Synapse
+# Synapse 🧠
 
 A high-performance, generic similarity-based cache for Go with intelligent sharding and pluggable eviction policies.
 
