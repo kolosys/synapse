@@ -220,7 +220,7 @@ func NewLRU(maxSize int) *LRU
 Len implements EvictionPolicy
 
 ```go
-func (*CombinedPolicy) Len() int
+func (*LRU) Len() int
 ```
 
 **Parameters:**
