@@ -8,16 +8,16 @@ import (
 type EvictionPolicy interface {
 	// OnAccess is called when an entry is accessed
 	OnAccess(key any)
-	
+
 	// OnAdd is called when an entry is added
 	OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time)
-	
+
 	// OnRemove is called when an entry is removed
 	OnRemove(key any)
-	
+
 	// SelectVictim returns the key of the entry to evict
 	SelectVictim() (any, bool)
-	
+
 	// Len returns the number of tracked entries
 	Len() int
 }
@@ -33,7 +33,7 @@ func NewCombinedPolicy(policies []EvictionPolicy, weights []float64) *CombinedPo
 	if len(policies) != len(weights) {
 		panic("policies and weights must have the same length")
 	}
-	
+
 	// Normalize weights
 	sum := 0.0
 	for _, w := range weights {
@@ -43,7 +43,7 @@ func NewCombinedPolicy(policies []EvictionPolicy, weights []float64) *CombinedPo
 	for i, w := range weights {
 		normalized[i] = w / sum
 	}
-	
+
 	return &CombinedPolicy{
 		policies: policies,
 		weights:  normalized,
@@ -87,4 +87,3 @@ func (c *CombinedPolicy) Len() int {
 	}
 	return c.policies[0].Len()
 }
-
