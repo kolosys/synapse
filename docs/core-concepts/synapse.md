@@ -15,20 +15,18 @@ Synapse is more than a traditional key-value cache. It supports **similarity-bas
 Synapse distributes entries across multiple shards to reduce lock contention and improve concurrent performance:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Cache[K, V]                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │ Shard 0  │  │ Shard 1  │  │ Shard 2  │  │ Shard N  │    │
-│  ├──────────┤  ├──────────┤  ├──────────┤  ├──────────┤    │
-│  │ RWMutex  │  │ RWMutex  │  │ RWMutex  │  │ RWMutex  │    │
-│  │ data map │  │ data map │  │ data map │  │ data map │    │
-│  │ keys []K │  │ keys []K │  │ keys []K │  │ keys []K │    │
-│  │ eviction │  │ eviction │  │ eviction │  │ eviction │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                        Cache[K, V]                       │
+├──────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │ Shard 0  │  │ Shard 1  │  │ Shard 2  │  │ Shard N  │  │
+│  ├──────────┤  ├──────────┤  ├──────────┤  ├──────────┤  │
+│  │ RWMutex  │  │ RWMutex  │  │ RWMutex  │  │ RWMutex  │  │
+│  │ data map │  │ data map │  │ data map │  │ data map │  │
+│  │ keys []K │  │ keys []K │  │ keys []K │  │ keys []K │  │
+│  │ eviction │  │ eviction │  │ eviction │  │ eviction │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+└──────────────────────────────────────────────────────────┘
 ```
 
 Each shard operates independently with:
