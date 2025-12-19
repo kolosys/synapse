@@ -112,7 +112,7 @@ func (*LRU) OnRemove(key any)
 SelectVictim implements EvictionPolicy It uses the first policy's victim selection
 
 ```go
-func (*LRU) SelectVictim() (any, bool)
+func (*CombinedPolicy) SelectVictim() (any, bool)
 ```
 
 **Parameters:**
@@ -220,7 +220,7 @@ func NewLRU(maxSize int) *LRU
 Len implements EvictionPolicy
 
 ```go
-func (*CombinedPolicy) Len() int
+func (*LRU) Len() int
 ```
 
 **Parameters:**
