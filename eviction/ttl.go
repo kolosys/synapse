@@ -20,12 +20,12 @@ func NewTTL(ttl time.Duration) *TTL {
 		ttl:         ttl,
 		cleanupDone: make(chan struct{}),
 	}
-	
+
 	// Start background cleanup goroutine
 	if ttl > 0 {
 		go t.cleanupLoop()
 	}
-	
+
 	return t
 }
 
@@ -33,7 +33,7 @@ func NewTTL(ttl time.Duration) *TTL {
 func (t *TTL) cleanupLoop() {
 	ticker := time.NewTicker(t.ttl / 2)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -48,7 +48,7 @@ func (t *TTL) cleanupLoop() {
 func (t *TTL) cleanup() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	now := time.Now()
 	for key, expiry := range t.items {
 		if now.After(expiry) {
@@ -61,7 +61,7 @@ func (t *TTL) cleanup() {
 func (t *TTL) OnAccess(key any) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	if expiry, ok := t.items[key]; ok {
 		if time.Now().After(expiry) {
 			delete(t.items, key)
@@ -73,7 +73,7 @@ func (t *TTL) OnAccess(key any) {
 func (t *TTL) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	t.items[key] = createdAt.Add(t.ttl)
 }
 
@@ -81,7 +81,7 @@ func (t *TTL) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time
 func (t *TTL) OnRemove(key any) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	delete(t.items, key)
 }
 
@@ -89,14 +89,14 @@ func (t *TTL) OnRemove(key any) {
 func (t *TTL) SelectVictim() (any, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	now := time.Now()
 	for key, expiry := range t.items {
 		if now.After(expiry) {
 			return key, true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -111,4 +111,3 @@ func (t *TTL) Len() int {
 func (t *TTL) Close() {
 	close(t.cleanupDone)
 }
-
