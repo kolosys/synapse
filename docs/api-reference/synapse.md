@@ -126,6 +126,20 @@ func (**ast.IndexListExpr) Set(ctx context.Context, key K, value V) error
 **Returns:**
 - error
 
+### Stats
+
+Stats returns aggregated statistics from all shards Returns zero values if stats are not enabled
+
+```go
+func (**ast.IndexListExpr) Stats() Stats
+```
+
+**Parameters:**
+  None
+
+**Returns:**
+- Stats
+
 ### WithSimilarity
 
 WithSimilarity sets the similarity function for the cache
@@ -468,6 +482,53 @@ var value SimilarityFunc
 ```go
 type SimilarityFunc func(a, b K) float64
 ```
+
+### Stats
+Stats contains cache performance statistics
+
+#### Example Usage
+
+```go
+// Create a new Stats
+stats := Stats{
+    Hits: 42,
+    Misses: 42,
+    Sets: 42,
+    Deletes: 42,
+    SimilarSearches: 42,
+    SimilarHits: 42,
+    Evictions: 42,
+    Expired: 42,
+}
+```
+
+#### Type Definition
+
+```go
+type Stats struct {
+    Hits uint64
+    Misses uint64
+    Sets uint64
+    Deletes uint64
+    SimilarSearches uint64
+    SimilarHits uint64
+    Evictions uint64
+    Expired uint64
+}
+```
+
+### Fields
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| Hits | `uint64` |  |
+| Misses | `uint64` |  |
+| Sets | `uint64` |  |
+| Deletes | `uint64` |  |
+| SimilarSearches | `uint64` |  |
+| SimilarHits | `uint64` |  |
+| Evictions | `uint64` |  |
+| Expired | `uint64` |  |
 
 ## Functions
 

@@ -98,7 +98,7 @@ func (*LRU) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time)
 OnRemove implements EvictionPolicy
 
 ```go
-func (*CombinedPolicy) OnRemove(key any)
+func (*LRU) OnRemove(key any)
 ```
 
 **Parameters:**
@@ -220,7 +220,7 @@ func NewLRU(maxSize int) *LRU
 Len implements EvictionPolicy
 
 ```go
-func (*LRU) Len() int
+func (*CombinedPolicy) Len() int
 ```
 
 **Parameters:**
