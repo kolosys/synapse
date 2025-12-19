@@ -50,6 +50,7 @@ func New[K comparable, V any](opts ...Option) *Cache[K, V] {
 			c.threshold,
 			options.TTL,
 			policy,
+			options.EnableStats,
 		)
 	}
 
@@ -132,6 +133,30 @@ func (c *Cache[K, V]) Len() int {
 		total += shard.len()
 	}
 	return total
+}
+
+// Stats returns aggregated statistics from all shards
+// Returns zero values if stats are not enabled
+func (c *Cache[K, V]) Stats() Stats {
+	if !c.options.EnableStats {
+		return Stats{}
+	}
+
+	var stats Stats
+	for _, shard := range c.shards {
+		if shard.stats != nil {
+			shardStats := shard.stats.snapshot()
+			stats.Hits += shardStats.Hits
+			stats.Misses += shardStats.Misses
+			stats.Sets += shardStats.Sets
+			stats.Deletes += shardStats.Deletes
+			stats.SimilarSearches += shardStats.SimilarSearches
+			stats.SimilarHits += shardStats.SimilarHits
+			stats.Evictions += shardStats.Evictions
+			stats.Expired += shardStats.Expired
+		}
+	}
+	return stats
 }
 
 // keyToString converts a key to a string for hashing

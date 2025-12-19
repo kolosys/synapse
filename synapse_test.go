@@ -231,3 +231,123 @@ func TestCacheSharding(t *testing.T) {
 	}
 	t.Logf("Retrieved %d out of %d keys", retrieved, count)
 }
+
+func TestCacheStats(t *testing.T) {
+	cache := New[string, string](
+		WithStats(true),
+		WithShards(1), // Use single shard for predictable stats
+	)
+	ctx := context.Background()
+
+	// Initial stats should be zero
+	stats := cache.Stats()
+	if stats.Hits != 0 || stats.Misses != 0 || stats.Sets != 0 {
+		t.Fatalf("Initial stats should be zero, got %+v", stats)
+	}
+
+	// Test Set
+	cache.Set(ctx, "key1", "value1")
+	cache.Set(ctx, "key2", "value2")
+	stats = cache.Stats()
+	if stats.Sets != 2 {
+		t.Fatalf("Expected 2 sets, got %d", stats.Sets)
+	}
+
+	// Test Get hits
+	cache.Get(ctx, "key1")
+	cache.Get(ctx, "key2")
+	stats = cache.Stats()
+	if stats.Hits != 2 {
+		t.Fatalf("Expected 2 hits, got %d", stats.Hits)
+	}
+
+	// Test Get misses
+	cache.Get(ctx, "key3")
+	cache.Get(ctx, "key4")
+	stats = cache.Stats()
+	if stats.Misses != 2 {
+		t.Fatalf("Expected 2 misses, got %d", stats.Misses)
+	}
+
+	// Test Delete
+	cache.Delete(ctx, "key1")
+	stats = cache.Stats()
+	if stats.Deletes != 1 {
+		t.Fatalf("Expected 1 delete, got %d", stats.Deletes)
+	}
+
+	// Test similarity search
+	cache.WithSimilarity(algorithms.Levenshtein)
+	cache.Set(ctx, "hello", "world")
+	cache.GetSimilar(ctx, "helo")
+	stats = cache.Stats()
+	if stats.SimilarSearches == 0 {
+		t.Fatal("Expected at least 1 similarity search")
+	}
+}
+
+func TestCacheStatsDisabled(t *testing.T) {
+	cache := New[string, string](
+		WithStats(false),
+	)
+	ctx := context.Background()
+
+	// Perform operations
+	cache.Set(ctx, "key1", "value1")
+	cache.Get(ctx, "key1")
+	cache.Get(ctx, "key2")
+	cache.Delete(ctx, "key1")
+
+	// Stats should return zero values when disabled
+	stats := cache.Stats()
+	if stats.Hits != 0 || stats.Misses != 0 || stats.Sets != 0 || stats.Deletes != 0 {
+		t.Fatalf("Stats should be zero when disabled, got %+v", stats)
+	}
+}
+
+func TestCacheStatsExpired(t *testing.T) {
+	cache := New[string, string](
+		WithStats(true),
+		WithTTL(50*time.Millisecond),
+		WithShards(1),
+	)
+	ctx := context.Background()
+
+	cache.Set(ctx, "key1", "value1")
+	cache.Get(ctx, "key1") // Should hit
+
+	// Wait for expiration
+	time.Sleep(100 * time.Millisecond)
+
+	// Try to get expired key
+	cache.Get(ctx, "key1") // Should miss and record expired
+
+	stats := cache.Stats()
+	if stats.Expired == 0 {
+		t.Fatal("Expected at least 1 expired entry")
+	}
+	if stats.Misses < 1 {
+		t.Fatal("Expected at least 1 miss for expired entry")
+	}
+}
+
+func TestCacheStatsEviction(t *testing.T) {
+	policy := eviction.NewLRU(2)
+	cache := New[string, string](
+		WithStats(true),
+		WithMaxSize(2),
+		WithShards(1),
+		WithEviction(policy),
+	)
+	ctx := context.Background()
+
+	// Fill cache to trigger eviction
+	cache.Set(ctx, "key1", "value1")
+	cache.Set(ctx, "key2", "value2")
+	cache.Set(ctx, "key3", "value3") // Should evict one
+
+	stats := cache.Stats()
+	if stats.Evictions == 0 {
+		t.Fatal("Expected at least 1 eviction")
+	}
+}

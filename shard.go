@@ -18,11 +18,13 @@ type Shard[K comparable, V any] struct {
 	similarity     SimilarityFunc[K]
 	threshold      float64
 	ttl            time.Duration
+	stats          *shardStats
+	enableStats    bool
 }
 
 // newShard creates a new cache shard
-func newShard[K comparable, V any](maxSize int, similarity SimilarityFunc[K], threshold float64, ttl time.Duration, policy eviction.EvictionPolicy) *Shard[K, V] {
-	return &Shard[K, V]{
+func newShard[K comparable, V any](maxSize int, similarity SimilarityFunc[K], threshold float64, ttl time.Duration, policy eviction.EvictionPolicy, enableStats bool) *Shard[K, V] {
+	s := &Shard[K, V]{
 		data:           make(map[K]*Entry[K, V]),
 		keys:           make([]K, 0),
 		evictionPolicy: policy,
@@ -30,7 +32,12 @@ func newShard[K comparable, V any](maxSize int, similarity SimilarityFunc[K], th
 		similarity:     similarity,
 		threshold:      threshold,
 		ttl:            ttl,
+		enableStats:    enableStats,
 	}
+	if enableStats {
+		s.stats = newShardStats()
+	}
+	return s
 }
 
 // get retrieves a value by exact key match
@@ -50,18 +57,28 @@ func (s *Shard[K, V]) get(ctx context.Context, key K) (V, bool) {
 
 	entry, ok := s.data[key]
 	if !ok {
+		if s.enableStats {
+			s.stats.recordMiss()
+		}
 		var zero V
 		return zero, false
 	}
 
 	// Check namespace match
 	if namespace != "" && entry.Namespace != namespace {
+		if s.enableStats {
+			s.stats.recordMiss()
+		}
 		var zero V
 		return zero, false
 	}
 
 	// Check expiration
 	if entry.IsExpired() {
+		if s.enableStats {
+			s.stats.recordExpired()
+			s.stats.recordMiss()
+		}
 		var zero V
 		return zero, false
 	}
@@ -70,6 +87,10 @@ func (s *Shard[K, V]) get(ctx context.Context, key K) (V, bool) {
 	entry.Touch()
 	if s.evictionPolicy != nil {
 		s.evictionPolicy.OnAccess(key)
+	}
+
+	if s.enableStats {
+		s.stats.recordHit()
 	}
 
 	return entry.Value, true
@@ -87,6 +108,10 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 		var zeroK K
 		return zeroV, zeroK, 0, false
 	default:
+	}
+
+	if s.enableStats {
+		s.stats.recordSimilarSearch()
 	}
 
 	namespace := GetNamespace(ctx)
@@ -137,6 +162,9 @@ func (s *Shard[K, V]) getSimilar(ctx context.Context, key K) (V, K, float64, boo
 		if s.evictionPolicy != nil {
 			s.evictionPolicy.OnAccess(bestKey)
 		}
+		if s.enableStats {
+			s.stats.recordSimilarHit()
+		}
 	}
 
 	return bestValue, bestKey, bestScore, found
@@ -163,6 +191,9 @@ func (s *Shard[K, V]) set(ctx context.Context, key K, value V) error {
 		if s.evictionPolicy != nil {
 			s.evictionPolicy.OnAccess(key)
 		}
+		if s.enableStats {
+			s.stats.recordSet()
+		}
 		return nil
 	}
 
@@ -180,6 +211,10 @@ func (s *Shard[K, V]) set(ctx context.Context, key K, value V) error {
 
 	if s.evictionPolicy != nil {
 		s.evictionPolicy.OnAdd(key, entry.AccessCount, entry.CreatedAt, entry.AccessedAt)
+	}
+
+	if s.enableStats {
+		s.stats.recordSet()
 	}
 
 	return nil
@@ -215,6 +250,10 @@ func (s *Shard[K, V]) delete(ctx context.Context, key K) bool {
 		s.evictionPolicy.OnRemove(key)
 	}
 
+	if s.enableStats {
+		s.stats.recordDelete()
+	}
+
 	return true
 }
 
@@ -226,6 +265,9 @@ func (s *Shard[K, V]) evict() error {
 			key := s.keys[0]
 			delete(s.data, key)
 			s.keys = s.keys[1:]
+			if s.enableStats {
+				s.stats.recordEviction()
+			}
 		}
 		return nil
 	}
@@ -251,6 +293,10 @@ func (s *Shard[K, V]) evict() error {
 	}
 
 	s.evictionPolicy.OnRemove(key)
+
+	if s.enableStats {
+		s.stats.recordEviction()
+	}
 
 	return nil
 }
