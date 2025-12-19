@@ -98,7 +98,7 @@ func (*LRU) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time)
 OnRemove implements EvictionPolicy
 
 ```go
-func (*LRU) OnRemove(key any)
+func (*CombinedPolicy) OnRemove(key any)
 ```
 
 **Parameters:**
@@ -112,7 +112,7 @@ func (*LRU) OnRemove(key any)
 SelectVictim implements EvictionPolicy It uses the first policy's victim selection
 
 ```go
-func (*CombinedPolicy) SelectVictim() (any, bool)
+func (*LRU) SelectVictim() (any, bool)
 ```
 
 **Parameters:**
