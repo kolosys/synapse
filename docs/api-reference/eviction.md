@@ -67,7 +67,7 @@ func (*LRU) Len() int
 OnAccess implements EvictionPolicy
 
 ```go
-func (*LRU) OnAccess(key any)
+func (*TTL) OnAccess(key any)
 ```
 
 **Parameters:**
@@ -98,7 +98,7 @@ func (*LRU) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time)
 OnRemove implements EvictionPolicy
 
 ```go
-func (*LRU) OnRemove(key any)
+func (*TTL) OnRemove(key any)
 ```
 
 **Parameters:**
@@ -112,7 +112,7 @@ func (*LRU) OnRemove(key any)
 SelectVictim implements EvictionPolicy It uses the first policy's victim selection
 
 ```go
-func (*LRU) SelectVictim() (any, bool)
+func (*TTL) SelectVictim() (any, bool)
 ```
 
 **Parameters:**
@@ -221,6 +221,131 @@ Len implements EvictionPolicy
 
 ```go
 func (*CombinedPolicy) Len() int
+```
+
+**Parameters:**
+  None
+
+**Returns:**
+- int
+
+### OnAccess
+
+OnAccess implements EvictionPolicy
+
+```go
+func (*LRU) OnAccess(key any)
+```
+
+**Parameters:**
+- `key` (any)
+
+**Returns:**
+  None
+
+### OnAdd
+
+OnAdd implements EvictionPolicy
+
+```go
+func (*LRU) OnAdd(key any, accessCount uint64, createdAt, accessedAt time.Time)
+```
+
+**Parameters:**
+- `key` (any)
+- `accessCount` (uint64)
+- `createdAt` (time.Time)
+- `accessedAt` (time.Time)
+
+**Returns:**
+  None
+
+### OnRemove
+
+OnRemove implements EvictionPolicy
+
+```go
+func (*TTL) OnRemove(key any)
+```
+
+**Parameters:**
+- `key` (any)
+
+**Returns:**
+  None
+
+### SelectVictim
+
+SelectVictim implements EvictionPolicy
+
+```go
+func (*CombinedPolicy) SelectVictim() (any, bool)
+```
+
+**Parameters:**
+  None
+
+**Returns:**
+- any
+- bool
+
+### TTL
+TTL implements a Time-To-Live eviction policy
+
+#### Example Usage
+
+```go
+// Create a new TTL
+ttl := TTL{
+
+}
+```
+
+#### Type Definition
+
+```go
+type TTL struct {
+}
+```
+
+### Constructor Functions
+
+### NewTTL
+
+NewTTL creates a new TTL eviction policy
+
+```go
+func NewTTL(ttl time.Duration) *TTL
+```
+
+**Parameters:**
+- `ttl` (time.Duration)
+
+**Returns:**
+- *TTL
+
+## Methods
+
+### Close
+
+Close stops the cleanup goroutine
+
+```go
+func (*TTL) Close()
+```
+
+**Parameters:**
+  None
+
+**Returns:**
+  None
+
+### Len
+
+Len implements EvictionPolicy
+
+```go
+func (*LRU) Len() int
 ```
 
 **Parameters:**
